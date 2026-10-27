@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phân cụm dữ liệu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#FFFFFF; --soft:#F4F6F7; --soft-2:#E8ECEE;
+  --ink:#101418; --ink-2:#39424B; --ink-3:#6B757E;
+  --line:#CFD6DB; --line-2:#E4E9EC;
+  --accent:#1D4ED8; --accent-soft:#E9F0FD; --accent-dk:#1E3A8A;
+  --c0:#15807E; --c1:#B07E12; --c2:#6A4A9E; --c3:#C2410C; --c4:#2563EB;
+  --good:#1F6B3E; --good-soft:#DEEFE5;
+  --bad:#A32C2C; --bad-soft:#F8E0DF;
+  --gray-pt:#8E99A3;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg); margin:0;}
+body{color:var(--ink); font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px; line-height:1.5; -webkit-font-smoothing:antialiased;}
+.wrap{max-width:1500px; margin:0 auto; padding:18px 22px 26px;}
+a{color:var(--accent);}
+.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+
+header{text-align:center; padding:4px 0 12px;}
+h1{font-size:clamp(26px,3.2vw,36px); font-weight:800; letter-spacing:-.02em; line-height:1.15;
+  margin:0; color:var(--accent-dk);}
+
+.seg{display:inline-flex; border:1.5px solid var(--line); border-radius:8px; overflow:hidden; flex-wrap:wrap;}
+.seg button{appearance:none; border:0; background:var(--bg); font:inherit; font-size:15px; font-weight:600;
+  padding:8px 15px; cursor:pointer; color:var(--ink-2); border-right:1.5px solid var(--line);}
+.seg button:last-child{border-right:0;}
+.seg button:hover{background:var(--soft);}
+.seg button[aria-pressed="true"]{background:var(--accent); color:#fff;}
+.seg button:focus-visible{outline:3px solid var(--accent); outline-offset:-3px;}
+
+.two{display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:20px; align-items:start;}
+.two.even{grid-template-columns:repeat(2,minmax(0,1fr));}
+.three{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px;}
+.col{display:flex; flex-direction:column; gap:16px;}
+
+.box{border:1.5px solid var(--line); border-radius:10px; background:var(--bg); overflow:hidden;}
+.box-h{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;
+  padding:12px 16px; border-bottom:1.5px solid var(--line-2); background:var(--soft);}
+.box-h h3{margin:0; font-size:18px; font-weight:700; color:var(--accent-dk);}
+.box-h .meta{font-size:14px; color:var(--ink-3);}
+.box-b{padding:16px;}
+
+h2{font-size:22px; font-weight:800; letter-spacing:-.01em; margin:0 0 10px; color:var(--accent-dk);}
+p{margin:0 0 11px;}
+.muted{color:var(--ink-3);}
+
+.panel{padding-top:14px;}
+.stage{min-height:60vh;}
+.stage > *{animation:fade .28s ease-out;}
+@keyframes fade{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;} }
+.stage .two{align-items:stretch;}
+
+ol.prog{list-style:none; margin:0 0 16px; padding:0; display:flex; align-items:stretch;
+  gap:0; border:1.5px solid var(--line); border-radius:10px; overflow:hidden;}
+ol.prog li{flex:1 1 0; min-width:0;}
+ol.prog button{width:100%; height:100%; appearance:none; background:var(--bg); border:0;
+  border-right:1.5px solid var(--line); font:inherit; cursor:pointer; padding:9px 10px 10px;
+  display:grid; gap:1px; text-align:left;}
+ol.prog li:last-child button{border-right:0;}
+ol.prog .sn{font-size:12.5px; font-weight:700; color:var(--ink-3);}
+ol.prog .st{font-size:15.5px; font-weight:700; color:var(--ink-2); line-height:1.25;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+ol.prog button:hover{background:var(--soft);}
+ol.prog li.done button{background:var(--soft);}
+ol.prog li.done .st{color:var(--ink-3);}
+ol.prog li.cur button{background:var(--accent);}
+ol.prog li.cur .sn{color:#BBD0F7;}
+ol.prog li.cur .st{color:#fff;}
+ol.prog button:focus-visible{outline:3px solid var(--accent-dk); outline-offset:-3px;}
+
+svg.chart{display:block; width:100%; height:auto; max-height:54vh;}
+.tick{font-family:"JetBrains Mono",monospace; font-size:13px; fill:var(--ink-2);}
+.axlab{font-size:15px; font-weight:700; fill:var(--ink);}
+.gridline{stroke:var(--line-2); stroke-width:1.2;}
+.axis{stroke:var(--ink-3); stroke-width:1.6;}
+.pt{transition:fill .45s ease, fill-opacity .45s ease;}
+.cenG{transition:transform .55s cubic-bezier(.4,.1,.2,1);}
+.ring{transition:opacity .45s ease;}
+.legend{display:flex; flex-wrap:wrap; gap:8px 20px; padding:4px 16px 14px; font-size:15px; color:var(--ink-2);}
+.legend span{display:inline-flex; align-items:center; gap:8px;}
+.legend i{width:13px; height:13px; border-radius:50%; display:inline-block; flex:none;}
+
+.say{border:1.5px solid var(--line); border-left:5px solid var(--accent); border-radius:0 10px 10px 0;
+  padding:15px 17px; background:var(--accent-soft);}
+.say h3{margin:0 0 9px; font-size:19px; font-weight:800; color:var(--accent-dk);}
+.say p{margin:0 0 10px; font-size:16.5px; color:var(--ink-2);}
+.say p:last-child{margin:0;}
+.say strong{color:var(--ink);}
+.say ul{margin:0 0 10px; padding-left:22px; font-size:16.5px; color:var(--ink-2);}
+.say li{margin-bottom:6px;}
+
+.note{border-left:5px solid var(--ink-3); background:var(--soft); padding:13px 16px; border-radius:0 8px 8px 0;
+  font-size:16px; color:var(--ink-2); margin:16px 0 0;}
+.note strong{color:var(--ink);}
+.note.warn{border-left-color:var(--bad); background:var(--bad-soft);}
+.note.ok{border-left-color:var(--good); background:var(--good-soft);}
+
+.kpis{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px;}
+.kpis.three{grid-template-columns:repeat(3,minmax(0,1fr));}
+.kpis.four{grid-template-columns:repeat(4,minmax(0,1fr));}
+.kpi{background:var(--soft); border-radius:8px; padding:11px 13px;}
+.kpi .k{font-size:13.5px; font-weight:600; color:var(--ink-3); display:block; line-height:1.3;}
+.kpi .v{font-family:"JetBrains Mono",monospace; font-size:26px; font-weight:700; display:block;
+  letter-spacing:-.02em; line-height:1.25; margin-top:1px;}
+.kpi .u{font-size:13.5px; color:var(--ink-3); display:block; line-height:1.3;}
+
+.run{display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center; margin:16px 0 0;}
+.btn{appearance:none; font:inherit; font-size:16px; font-weight:700; cursor:pointer; border-radius:8px;
+  padding:10px 20px; border:2px solid var(--ink); background:var(--ink); color:#fff;
+  display:inline-flex; align-items:center; gap:8px;}
+.btn:hover{background:#000;}
+.btn.ghost{background:var(--bg); color:var(--ink-2); border-color:var(--line);}
+.btn.ghost:hover{border-color:var(--ink-3); color:var(--ink);}
+.btn[disabled]{opacity:.35; cursor:default;}
+.btn:focus-visible{outline:3px solid var(--accent); outline-offset:2px;}
+.run .hint{font-size:15px; color:var(--ink-3);}
+
+.sl{display:grid; gap:5px;}
+.sl .slh{display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  font-size:15.5px; color:var(--ink-2); font-weight:600;}
+.sl .slh b{font-family:"JetBrains Mono",monospace; font-size:18px; color:var(--ink); font-weight:700;}
+input[type=range]{width:100%; accent-color:var(--accent); margin:0; height:24px;}
+
+.lesson{display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start;
+  background:#FFF8E1; border:2px solid #E0A800; border-radius:10px; padding:14px 17px; margin:16px 0 0;}
+.lesson .tag{font-size:13.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+  color:#8A6400; background:#FFE9A8; border-radius:6px; padding:5px 10px; white-space:nowrap;}
+.lesson p{margin:0; font-size:17px; color:#3D2E00; font-weight:600; line-height:1.45;}
+.lesson p strong{color:#1A1400;}
+
+.loopbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px;
+  background:var(--accent-soft); border:1.5px solid var(--line); border-radius:10px;}
+.loopbar .num{font-family:"JetBrains Mono",monospace; font-size:17px; font-weight:700; color:var(--accent-dk);}
+.loopbar .bar{flex:1 1 120px; height:9px; background:#fff; border-radius:5px; overflow:hidden;
+  border:1px solid var(--line);}
+.loopbar .bar i{display:block; height:100%; background:var(--accent); transition:width .3s ease;}
+
+table.t{border-collapse:collapse; width:100%; font-size:16px;}
+table.t th, table.t td{padding:9px 12px; border-bottom:1.5px solid var(--line-2); text-align:right;}
+table.t th{font-size:14px; font-weight:700; color:var(--ink-3); text-align:right;
+  border-bottom:1.5px solid var(--line);}
+table.t th:first-child, table.t td:first-child{text-align:left;}
+table.t td.l, table.t th.l{text-align:left;}
+table.t td.n{font-family:"JetBrains Mono",monospace; white-space:nowrap;}
+table.t tr:last-child td{border-bottom:0;}
+table.t th.ext, table.t td.ext{background:var(--accent-soft); }
+table.t th.ext{color:var(--accent);}
+table.t td.win{font-weight:800; color:var(--accent-dk);}
+.tw{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+table.t.compact{font-size:15px;}
+table.t.compact th, table.t.compact td{padding:6px 10px;}
+.sw{display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:8px;}
+
+.cards{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px;}
+.card{border:1.5px solid var(--line); border-radius:10px; padding:15px 16px; display:flex;
+  flex-direction:column; gap:8px;}
+.card h3{margin:0; font-size:18px; font-weight:800; display:flex; align-items:center; gap:9px; color:var(--accent-dk);}
+.card p{margin:0; font-size:16px; color:var(--ink-2);}
+.card .act{margin-top:auto; padding-top:10px; border-top:1.5px dashed var(--line);
+  font-size:16px; color:var(--ink); font-weight:700;}
+
+.pcard{border:1.5px solid var(--line); border-radius:10px; overflow:hidden;}
+.pcard .ph{padding:11px 15px; border-bottom:1.5px solid var(--line-2); background:var(--soft);}
+.pcard .ph h3{margin:0; font-size:17.5px; font-weight:800; color:var(--accent-dk);}
+.pcard .pf{padding:0 15px 14px; font-size:15.5px; color:var(--ink-2); margin:10px 0 0;}
+.pcard.fin{border-color:var(--accent);}
+.pcard.fin .ph{background:var(--accent-soft);}
+
+@media (max-width:1100px){
+  .two,.two.even{grid-template-columns:minmax(0,1fr);}
+  .three{grid-template-columns:minmax(0,1fr);}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width:720px){
+  body{font-size:16px;}
+  .wrap{padding:14px 14px 22px;}
+  .cards{grid-template-columns:minmax(0,1fr);}
+  .kpis.three,.kpis.four{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .tw table.t{min-width:560px;}
+}
+@media (prefers-reduced-motion:reduce){ .pt,.cenG,.ring{transition:none;} }
+
+/* ---------- bảng 12 hàng biết trượt ----------
+   Hàng dựng một lần rồi chỉ đổi transform. Không dựng lại thì mắt mới
+   theo được dòng nào về khối nào, đó là toàn bộ ý nghĩa của bước khoanh vùng. */
+.dhead{display:grid; grid-template-columns:40px 1.15fr 1fr 1.25fr;
+  gap:0 10px; padding:0 20px 7px; font-size:13.5px; font-weight:700; color:var(--ink-3);}
+.dbox{position:relative; transition:height .5s ease;}
+.band{position:absolute; left:0; right:0; top:0; border-radius:11px;
+  background:var(--soft); border:1.5px dashed var(--line); opacity:0;
+  transition:transform .5s ease, height .5s ease, opacity .3s ease;}
+.band .bh{padding:5px 14px 0; font-size:14px; font-weight:800; color:var(--ink-2);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.band .bh em{font-style:normal; font-weight:600; color:var(--ink-3);}
+.drow{position:absolute; left:10px; right:10px; height:30px; box-sizing:border-box;
+  display:grid; grid-template-columns:40px 1.15fr 1fr 1.25fr; gap:0 10px;
+  align-items:center; padding:0 10px; border-radius:7px; font-size:14.5px;
+  transition:transform .55s cubic-bezier(.4,0,.2,1), background-color .4s ease, color .4s ease;}
+.drow b{font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13px; opacity:.75;}
+.drow .sn2{font-family:"JetBrains Mono",monospace; font-size:14px;}
+.drow .kq{font-weight:800;}
+.drow.xam{background:#EEF1F3; color:var(--ink-3);}
+
+/* ---------- công thức toán ---------- */
+.ct{border:1.5px solid var(--line); border-left:4px solid var(--accent);
+  border-radius:9px; background:var(--bg); padding:13px 16px; margin:12px 0;}
+/* công thức dựng bằng HTML và CSS, không nhờ phông toán của trình duyệt */
+/* KHÔNG dùng flex ở đây: flex item mất đường chân nên sub nhảy lên thành số mũ */
+.ft{font-size:21px; line-height:2.1; color:var(--ink); margin:4px 0 2px;}
+.ft i{font-style:italic; font-family:Georgia,"Times New Roman",serif; font-size:1.05em;}
+.ft .fn{font-style:normal; font-family:inherit; font-size:1em;}
+.ft sub{font-size:.6em; font-style:italic; font-family:Georgia,"Times New Roman",serif;}
+.ft sub.n{font-size:.6em; font-style:normal; font-family:inherit;}
+.ft sup{font-size:.62em;}
+.ft .sg{display:inline-flex; flex-direction:column; align-items:center;
+  line-height:1; margin:0 7px; vertical-align:middle;}
+.ft .sg .g{font-size:1.7em; line-height:.86;
+  font-family:"Cambria Math","STIX Two Math",Georgia,serif;}
+.ft .sg .l{font-size:.62em; color:var(--ink-3); white-space:nowrap; padding:2px 0;}
+.ft .fr{display:inline-flex; flex-direction:column; align-items:center;
+  margin:0 7px; font-size:.84em; line-height:1.3; vertical-align:middle;}
+.ft .fr .t{border-bottom:1.6px solid currentColor; padding:0 7px 2px;}
+.ft .fr .m{padding:2px 7px 0;}
+.ft .rad{border-top:1.6px solid currentColor; padding:0 4px;}
+.ct .rap{font-family:"JetBrains Mono",monospace; font-size:14.5px; line-height:1.75;
+  color:var(--ink-2); margin:10px 0 0; word-break:break-word;}
+.ct .rap .kq{color:var(--accent-dk); font-weight:700;}
+.ct .nhan{font-size:13.5px; font-weight:700; color:var(--ink-3); margin:0 0 6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Phân cụm dữ liệu</h1></header>
+  <div class="panel">
+    <ol class="prog" id="prog"></ol>
+    <div class="stage" id="stage"></div>
+    <div class="run">
+      <button class="btn ghost" id="bPrev" type="button">&#9664; Lùi</button>
+      <button class="btn" id="bNext" type="button">Bước tiếp &#9654;</button>
+      <span class="hint" id="runHint"></span>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+/* ========== tiện ích chung ========== */
+function fmt(v,d){ d=d||0; return Number(v).toLocaleString("vi-VN",{minimumFractionDigits:d,maximumFractionDigits:d}).replace("-","−"); }
+function $(id){ return document.getElementById(id); }
+function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
+function mean(a){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]; return s/a.length; }
+function sdev(a){ var m=mean(a),s=0; for(var i=0;i<a.length;i++) s+=(a[i]-m)*(a[i]-m); return Math.sqrt(s/a.length); }
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+var HEXES=["#15807E","#B07E12","#6A4A9E","#C2410C","#2563EB"];
+var SOFTS=["#DDEEED","#F6ECD4","#E9E2F4","#FBE4D8","#DFE8FB"];
+var GRAY="#8E99A3", GRAYS="#EEF1F3";
+/* cỡ chữ nhãn vẽ trong biểu đồ, bản ảnh cho slide dùng cỡ lớn hơn */
+var CHU={nhan:13.5, cot:14};
+
+/* ========== vẽ SVG ========== */
+var NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,txt){ var e=document.createElementNS(NS,tag); for(var a in attrs) e.setAttribute(a,attrs[a]); if(txt!=null) e.textContent=txt; return e; }
+function clear(n){ while(n.firstChild) n.removeChild(n.firstChild); }
+function axes(svg,o){
+  var W=o.W,H=o.H,ML=o.ML,MR=o.MR,MT=o.MT,MB=o.MB;
+  var px=function(v){return ML+(v-o.xlo)/(o.xhi-o.xlo)*(W-ML-MR);};
+  var py=function(v){return H-MB-(v-o.ylo)/(o.yhi-o.ylo)*(H-MT-MB);};
+  var i;
+  for(i=0;i<o.yticks.length;i++){
+    svg.appendChild(el("line",{x1:ML,x2:W-MR,y1:py(o.yticks[i]),y2:py(o.yticks[i]),"class":"gridline"}));
+    svg.appendChild(el("text",{x:ML-7,y:py(o.yticks[i])+3.5,"class":"tick","text-anchor":"end"},fmt(o.yticks[i])));
+  }
+  for(i=0;i<o.xticks.length;i++){
+    svg.appendChild(el("text",{x:px(o.xticks[i]),y:H-MB+17,"class":"tick","text-anchor":"middle"},fmt(o.xticks[i])));
+  }
+  svg.appendChild(el("line",{x1:ML,x2:W-MR,y1:H-MB,y2:H-MB,"class":"axis"}));
+  svg.appendChild(el("line",{x1:ML,x2:ML,y1:MT,y2:H-MB,"class":"axis"}));
+  if(o.xlab) svg.appendChild(el("text",{x:(ML+W-MR)/2,y:H-6,"class":"axlab","text-anchor":"middle"},o.xlab));
+  if(o.ylab){ var cy=(MT+H-MB)/2; svg.appendChild(el("text",{x:14,y:cy,"class":"axlab","text-anchor":"middle",transform:"rotate(-90 14 "+cy+")"},o.ylab)); }
+  return {px:px,py:py};
+}
+function haloText(svg,x,y,txt,col,anchor,size,weight){
+  svg.appendChild(el("text",{x:x,y:y,"text-anchor":anchor||"middle",
+    style:"fill:"+col+";font-weight:"+(weight||700)+";font-size:"+(size||16)+"px;font-family:'Be Vietnam Pro',sans-serif;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round"},txt));
+}
+function seg(id,items,cur,on){
+  var box=$(id); if(!box) return; box.innerHTML="";
+  items.forEach(function(it){
+    var b=document.createElement("button"); b.type="button"; b.textContent=it.label;
+    b.setAttribute("aria-pressed", String(it.value===cur));
+    b.addEventListener("click",function(){ on(it.value); });
+    box.appendChild(b);
+  });
+}
+
+/* ===================================================================
+   12 nhà cung cấp của phòng mua hàng, hai đặc trưng đều là cột số nên
+   đo được bằng khoảng cách Euclid, đúng phép tính K-means trên slide.
+   Đúng bộ dữ liệu dùng trong slide và trong sổ tay Colab.
+   =================================================================== */
+var COT={ng:"Số ngày giao", xl:"Số ngày xử lý khiếu nại"};
+/* hai đặc trưng đều tính bằng ngày nên cộng bình phương của chúng có nghĩa,
+   khoảng cách Euclid ở đây cũng tính bằng ngày */
+var DU=[
+ ["NCC1", 2, 1],["NCC2", 3, 2],["NCC3", 2, 3],["NCC4", 4, 2],
+ ["NCC5",10, 2],["NCC6",11, 1],["NCC7",12, 3],["NCC8", 9, 3],
+ ["NCC9", 3,11],["NCC10",4,12],["NCC11",2,10],["NCC12",5,13]
+].map(function(a,i){ return {id:i, ten:a[0], ng:a[1], xl:a[2]}; });
+var NGOAI={id:12, ten:"NCC13", ng:30, xl:3};
+
+/* tên nghiệp vụ của ba cụm, gắn theo vị trí tâm chứ không theo số thứ tự
+   mà thuật toán trả về, vì số thứ tự cụm đổi theo tâm khởi tạo */
+function tenCum(c){
+  if(c.xl>7) return {ten:"Nhóm chậm xử lý", mau:2, viec:"Siết điều khoản đổi trả, ràng thời hạn xử lý"};
+  if(c.ng>7) return {ten:"Nhóm giao chậm", mau:1, viec:"Đặt hàng sớm hơn, tăng tồn kho an toàn"};
+  return {ten:"Nhóm tin cậy", mau:0, viec:"Tăng tỷ trọng đơn, hợp đồng dài hạn"};
+}
+
+/* ---------- khoảng cách và K-means ---------- */
+function kc(a,b){ var dx=a[0]-b[0], dy=a[1]-b[1]; return Math.sqrt(dx*dx+dy*dy); }
+function toXY(rows){ return rows.map(function(d){ return [d.ng,d.xl]; }); }
+function ganDiem(X,C){
+  return X.map(function(x){
+    var bk=0, bd=kc(x,C[0]);
+    for(var k=1;k<C.length;k++){ var dd=kc(x,C[k]); if(dd<bd-1e-12){ bd=dd; bk=k; } }
+    return bk;
+  });
+}
+function capNhatTam(X,lab,C){
+  var out=[];
+  for(var k=0;k<C.length;k++){
+    var sx=0, sy=0, n=0;
+    for(var i=0;i<X.length;i++) if(lab[i]===k){ sx+=X[i][0]; sy+=X[i][1]; n++; }
+    out.push(n ? [sx/n, sy/n] : [C[k][0],C[k][1]]);
+  }
+  return out;
+}
+function tinhWSS(X,lab,C){
+  var s=0; for(var i=0;i<X.length;i++){ var d=kc(X[i],C[lab[i]]); s+=d*d; } return s;
+}
+/* một vòng lặp: gán điểm rồi cập nhật tâm. Trả về trạng thái sau vòng đó. */
+function motVong(X,C){
+  var lab=ganDiem(X,C), Cm=capNhatTam(X,lab,C);
+  return {lab:lab, tam:Cm, wss:tinhWSS(X,lab,Cm)};
+}
+/* chạy tới hội tụ từ một bộ tâm cho trước, giữ lại lịch sử từng vòng */
+function chayKMeans(X,C0,max){
+  var C=C0.map(function(c){ return [c[0],c[1]]; }), ls=[], i;
+  for(i=0;i<(max||40);i++){
+    var r=motVong(X,C);
+    var yen = r.tam.every(function(c,k){ return Math.abs(c[0]-C[k][0])<1e-12 && Math.abs(c[1]-C[k][1])<1e-12; });
+    ls.push({vong:i+1, lab:r.lab, tam:r.tam, wss:r.wss, yen:yen});
+    C=r.tam;
+    if(yen) break;
+  }
+  return ls;
+}
+/* K-means++ nhiều lần khởi tạo, giữ kết quả WSS nhỏ nhất.
+   12 điểm nên 40 lần là quá đủ để ra đúng nghiệm tốt nhất. */
+function kmeansTot(X,K,seed){
+  var rnd=mulberry(seed||7), best=null, lan;
+  for(lan=0;lan<40;lan++){
+    var C=[X[Math.floor(rnd()*X.length)].slice()];
+    while(C.length<K){
+      var dd=X.map(function(x){
+        var m=Infinity; C.forEach(function(c){ m=Math.min(m,kc(x,c)); }); return m*m;
+      });
+      var tong=dd.reduce(function(a,b){return a+b;},0), r=rnd()*tong, acc=0, pick=X.length-1;
+      for(var i=0;i<X.length;i++){ acc+=dd[i]; if(acc>=r){ pick=i; break; } }
+      C.push(X[pick].slice());
+    }
+    var ls=chayKMeans(X,C), cuoi=ls[ls.length-1];
+    if(!best || cuoi.wss<best.wss-1e-9) best={lab:cuoi.lab, tam:cuoi.tam, wss:cuoi.wss};
+  }
+  return best;
+}
+function silhouette(X,lab,K){
+  var s=[], i, j, k;
+  for(i=0;i<X.length;i++){
+    var tong=0, dem=0;
+    for(j=0;j<X.length;j++) if(j!==i && lab[j]===lab[i]){ tong+=kc(X[i],X[j]); dem++; }
+    if(!dem){ s.push(0); continue; }
+    var a=tong/dem, b=Infinity;
+    for(k=0;k<K;k++){
+      if(k===lab[i]) continue;
+      var t2=0, d2=0;
+      for(j=0;j<X.length;j++) if(lab[j]===k){ t2+=kc(X[i],X[j]); d2++; }
+      if(d2) b=Math.min(b,t2/d2);
+    }
+    s.push(b===Infinity ? 0 : (b-a)/Math.max(a,b));
+  }
+  return s;
+}
+
+/* ---------- kết quả cố định dùng cho cả lab ---------- */
+var X12=toXY(DU);
+var KQ=kmeansTot(X12,3,7);
+/* sắp cụm theo tên nghiệp vụ để màu và thứ tự không đổi giữa các bước */
+(function sapCum(){
+  var thu=[0,1,2].map(function(k){ return {k:k, c:KQ.tam[k], t:tenCum({ng:KQ.tam[k][0],xl:KQ.tam[k][1]})}; });
+  thu.sort(function(a,b){ return a.t.mau-b.t.mau; });
+  var map={}; thu.forEach(function(z,i){ map[z.k]=i; });
+  KQ.lab=KQ.lab.map(function(k){ return map[k]; });
+  KQ.tam=thu.map(function(z){ return z.c; });
+})();
+var TEN=KQ.tam.map(function(c){ return tenCum({ng:c[0],xl:c[1]}); });
+var SIL3=silhouette(X12,KQ.lab,3);
+var WSSK=[], SILK=[];
+(function theoK(){
+  for(var K=1;K<=5;K++){
+    var r=kmeansTot(X12,K,11+K);
+    WSSK.push(r.wss);
+    SILK.push(K>=2 ? mean(silhouette(X12,r.lab,K)) : null);
+  }
+})();
+var TAM0=[[10,2],[9,3],[3,11]];          /* tâm khởi tạo cố tình chọn xấu */
+var LS=chayKMeans(X12,TAM0);             /* lịch sử từng vòng, dùng ở bước vòng lặp */
+
+function wssCum(k){
+  var s=0; for(var i=0;i<X12.length;i++) if(KQ.lab[i]===k){ var d=kc(X12[i],KQ.tam[k]); s+=d*d; } return s;
+}
+function cumCua(d){
+  var x=[d.ng,d.xl], bk=0, bd=kc(x,KQ.tam[0]);
+  for(var k=1;k<3;k++){ var dd=kc(x,KQ.tam[k]); if(dd<bd){ bd=dd; bk=k; } }
+  return {k:bk, d:bd};
+}
+
+/* ================= HỘP CHỨA ================= */
+function kpiBox(lab,val,unit,col){
+  return '<div class="kpi"><span class="k">'+lab+'</span>'+
+    '<span class="v"'+(col?' style="color:'+col+'"':'')+'>'+val+'</span>'+
+    (unit?'<span class="u">'+unit+'</span>':'')+'</div>'; }
+function lesson(t){ return '<div class="lesson"><span class="tag">Bài học</span><p>'+t+'</p></div>'; }
+function chuThich(nhan){
+  return '<div class="legend">'+nhan.map(function(z,i){
+    return '<span><i style="background:'+(z.mau||HEXES[i])+'"></i>'+z.ten+'</span>'; }).join("")+'</div>';
+}
+
+/* ================= BẢNG 12 HÀNG BIẾT TRƯỢT ================= */
+var ROWH=28, HEADH=23, GAPB=10, PADB=8;
+var DBOX=null, RMAP={}, BANDS=[];
+
+/* Dựng 12 hàng đúng một lần cho cả phiên. DBOX sống ngoài stage nên
+   đổi bước không làm mất nó, chỉ chuyển chỗ gắn. */
+function dungHang(){
+  DBOX=document.createElement("div"); DBOX.className="dbox";
+  for(var i=0;i<3;i++){
+    var b=document.createElement("div"); b.className="band";
+    var t=document.createElement("div"); t.className="bh";
+    b.appendChild(t); DBOX.appendChild(b);
+    BANDS.push({el:b, bh:t});
+  }
+  DU.forEach(function(d){
+    var r=document.createElement("div"); r.className="drow xam";
+    r.innerHTML='<b>'+d.ten+'</b><span class="sn2">'+fmt(d.ng)+' ngày</span>'+
+      '<span class="sn2">'+fmt(d.xl)+' ngày</span><span class="kq" data-kq="1"></span>';
+    r._d=d; DBOX.appendChild(r); RMAP[d.id]=r;
+  });
+}
+function bangKhung(id,tieu){
+  return '<div class="box"><div class="box-h"><h3>'+tieu+'</h3><span class="meta" id="bMeta"></span></div>'+
+    '<div class="dhead"><span>Mã</span><span>Số ngày giao</span>'+
+    '<span>Ngày xử lý khiếu nại</span><span id="dh4">Cụm</span></div>'+
+    '<div id="'+id+'" style="padding:0 10px 12px"></div></div>'; }
+function gan(id){ var s=$(id); if(s && DBOX) s.appendChild(DBOX); }
+function sauKhung(fn){ if(typeof requestAnimationFrame==="function") requestAnimationFrame(fn); else fn(); }
+
+/* nhom: null là để nguyên thứ tự ban đầu, mảng 3 nhóm là trượt về ba khối */
+function xepBang(nhom,hienCum){
+  if(!DBOX) return;
+  var y=0, i, j;
+  if(!nhom){
+    BANDS.forEach(function(b){ b.el.style.opacity="0"; });
+    DU.forEach(function(d,ix){
+      var r=RMAP[d.id];
+      r.className="drow xam";
+      r.style.transform="translateY("+(ix*ROWH+PADB)+"px)";
+      r.querySelector("[data-kq]").textContent = hienCum ? "chưa có" : "";
+    });
+    DBOX.style.height=(DU.length*ROWH+PADB*2)+"px";
+    var m=$("bMeta"); if(m) m.textContent="12 dòng, chưa có nhãn cụm";
+    return;
+  }
+  for(i=0;i<3;i++){
+    var g=nhom[i], h=HEADH+g.length*ROWH+6;
+    var b=BANDS[i];
+    b.el.style.opacity="1";
+    b.el.style.height=h+"px";
+    b.el.style.transform="translateY("+y+"px)";
+    b.el.style.borderColor=HEXES[i];
+    b.el.style.background=SOFTS[i];
+    b.bh.innerHTML=TEN[i].ten+' <em>'+g.length+' nhà cung cấp, tâm ('+fmt(KQ.tam[i][0],2)+'; '+fmt(KQ.tam[i][1],2)+')</em>';
+    for(j=0;j<g.length;j++){
+      var r2=RMAP[g[j].id];
+      r2.className="drow";
+      r2.style.background="#fff";
+      r2.style.color=HEXES[i];
+      r2.style.transform="translateY("+(y+HEADH+j*ROWH)+"px)";
+      r2.querySelector("[data-kq]").textContent=TEN[i].ten;
+    }
+    y+=h+GAPB;
+  }
+  DBOX.style.height=(y-GAPB+PADB)+"px";
+  var m2=$("bMeta"); if(m2) m2.textContent="12 dòng đã về 3 cụm";
+}
+
+/* ================= BIỂU ĐỒ ĐIỂM =================
+   o: {lab, tam, vong, moi, capA, capB, rings, ngoai, xhi, nhan} */
+function veDiem(id,o){
+  var svg=$(id); if(!svg) return;
+  clear(svg);
+  o=o||{};
+  var xhi=o.xhi||14, yhi=o.yhi||15;
+  var W=880, H=o.H||470, ML=62, MR=24, MT=18, MB=50;
+  var xt=[], yt=[], v;
+  for(v=0; v<=xhi+1e-9; v+=(xhi>20?5:2)) xt.push(v);
+  for(v=0; v<=yhi+1e-9; v+=3) yt.push(v);
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+  var ax=axes(svg,{W:W,H:H,ML:ML,MR:MR,MT:MT,MB:MB,xlo:0,xhi:xhi,ylo:0,yhi:yhi,
+    xticks:xt,yticks:yt,xlab:"Số ngày giao trung bình",ylab:"Số ngày xử lý khiếu nại"});
+
+  var rows=DU.slice();
+  if(o.ngoai) rows=rows.concat([NGOAI]);
+  var lab=o.lab||null, tam=o.tam||null;
+
+  /* vòng khoanh cụm vẽ trước để nằm dưới điểm, cắt gọn trong khung trục
+     để vùng không tràn xuống dưới trục hoành */
+  if(o.rings && lab && tam){
+    var cpid="clip-"+id;
+    var cp=el("clipPath",{id:cpid});
+    cp.appendChild(el("rect",{x:ML-1,y:MT-1,width:(W-ML-MR+2),height:(H-MT-MB+2)}));
+    svg.appendChild(cp);
+    for(var k=0;k<tam.length;k++){
+      var rmax=0;
+      for(var i2=0;i2<rows.length;i2++) if(lab[i2]===k){
+        rmax=Math.max(rmax,kc([rows[i2].ng,rows[i2].xl],tam[k]));
+      }
+      /* hai trục khác thang nên vùng vẽ bằng ellipse, bán kính quy từ cùng
+         một khoảng cách dữ liệu, như vậy vùng mới đúng là hình tròn trong
+         không gian dữ liệu và luôn bọc hết các điểm của cụm */
+      var rdu=rmax+1.15;
+      var rx=Math.abs(ax.px(rdu)-ax.px(0)), ry=Math.abs(ax.py(rdu)-ax.py(0));
+      svg.appendChild(el("ellipse",{cx:ax.px(tam[k][0]).toFixed(1), cy:ax.py(tam[k][1]).toFixed(1),
+        rx:Math.max(rx,16).toFixed(1), ry:Math.max(ry,16).toFixed(1), "class":"ring",
+        "clip-path":"url(#"+cpid+")",
+        style:"fill:"+SOFTS[k]+";fill-opacity:.55;stroke:"+HEXES[k]+";stroke-width:2.2;stroke-dasharray:8 6"}));
+    }
+  }
+  /* đoạn thẳng khoảng cách giữa hai nhà cung cấp */
+  if(o.capA!=null && o.capB!=null){
+    var A=DU[o.capA], B=DU[o.capB];
+    svg.appendChild(el("line",{x1:ax.px(A.ng),y1:ax.py(A.xl),x2:ax.px(B.ng),y2:ax.py(B.xl),
+      style:"stroke:"+HEXES[4]+";stroke-width:3;stroke-dasharray:7 5"}));
+    svg.appendChild(el("line",{x1:ax.px(A.ng),y1:ax.py(A.xl),x2:ax.px(B.ng),y2:ax.py(A.xl),
+      style:"stroke:"+GRAY+";stroke-width:1.8;stroke-dasharray:4 4"}));
+    svg.appendChild(el("line",{x1:ax.px(B.ng),y1:ax.py(A.xl),x2:ax.px(B.ng),y2:ax.py(B.xl),
+      style:"stroke:"+GRAY+";stroke-width:1.8;stroke-dasharray:4 4"}));
+    haloText(svg,(ax.px(A.ng)+ax.px(B.ng))/2,(ax.py(A.xl)+ax.py(B.xl))/2-11,
+      "d = "+fmt(kc([A.ng,A.xl],[B.ng,B.xl]),2),HEXES[4],"middle",CHU.nhan+2.5,800);
+  }
+  /* nối điểm tới tâm cụm của nó, cho thấy WSS là tổng các đoạn này */
+  if(o.noiTam && lab && tam){
+    for(var i3=0;i3<rows.length;i3++){
+      svg.appendChild(el("line",{x1:ax.px(rows[i3].ng),y1:ax.py(rows[i3].xl),
+        x2:ax.px(tam[lab[i3]][0]),y2:ax.py(tam[lab[i3]][1]),
+        style:"stroke:"+HEXES[lab[i3]]+";stroke-width:1.6;stroke-opacity:.5"}));
+    }
+  }
+  /* điểm dữ liệu. Nhãn đặt theo bốn hướng, chọn hướng đầu tiên không đè
+     lên nhãn đã đặt hay lên hình thoi tâm cụm, nếu không chữ chồng nhau. */
+  var choan=[];
+  if(tam) for(var kt=0;kt<tam.length;kt++)
+    choan.push({x1:ax.px(tam[kt][0])-11, x2:ax.px(tam[kt][0])+11,
+                y1:ax.py(tam[kt][1])-11, y2:ax.py(tam[kt][1])+11});
+  for(var i=0;i<rows.length;i++){
+    var d=rows[i], mau = lab ? HEXES[lab[i]] : GRAY;
+    var nhan = o.doi && o.doi.indexOf(d.id)>=0;
+    var cx0=ax.px(d.ng), cy0=ax.py(d.xl);
+    svg.appendChild(el("circle",{cx:cx0.toFixed(1), cy:cy0.toFixed(1),
+      r:nhan?10.5:8, "class":"pt",
+      style:"fill:"+mau+";stroke:#fff;stroke-width:"+(nhan?3:2)}));
+    if(o.ten===false) continue;
+    var rong=d.ten.length*CHU.nhan*0.62, cao=CHU.nhan+3.5;
+    var huong=[{dx:0,dy:-15,a:"middle"},{dx:0,dy:25,a:"middle"},
+               {dx:14,dy:5,a:"start"},{dx:-14,dy:5,a:"end"},
+               {dx:14,dy:-13,a:"start"},{dx:-14,dy:-13,a:"end"},
+               {dx:14,dy:23,a:"start"},{dx:-14,dy:23,a:"end"}];
+    function hopCua(hu){
+      var lx=cx0+hu.dx, ly=cy0+hu.dy;
+      var x1 = hu.a==="middle" ? lx-rong/2 : (hu.a==="start" ? lx : lx-rong);
+      return {x1:x1, x2:x1+rong, y1:ly-cao+3, y2:ly+4};
+    }
+    function phanDe(b){
+      var t=0;
+      for(var z=0;z<choan.length;z++){
+        var c=choan[z];
+        var w2=Math.min(b.x2,c.x2)-Math.max(b.x1,c.x1);
+        var h2=Math.min(b.y2,c.y2)-Math.max(b.y1,c.y1);
+        if(w2>0 && h2>0) t+=w2*h2;
+      }
+      if(b.x1<ML-4 || b.x2>W-MR+4 || b.y1<MT-6 || b.y2>H-MB+4) t+=4000;
+      return t;
+    }
+    var chon=null, bmin=null, demin=Infinity, j;
+    for(j=0;j<huong.length;j++){
+      var b=hopCua(huong[j]), de=phanDe(b);
+      if(de<demin){ demin=de; chon=huong[j]; bmin=b; }
+      if(de===0) break;
+    }
+    choan.push(bmin);
+    haloText(svg,cx0+chon.dx,cy0+chon.dy,d.ten,lab?HEXES[lab[i]]:"#39424B",chon.a,CHU.nhan,700);
+  }
+  /* tâm cụm */
+  if(tam){
+    for(var k2=0;k2<tam.length;k2++){
+      var cx=ax.px(tam[k2][0]), cy=ax.py(tam[k2][1]);
+      var g=el("g",{"class":"cenG"});
+      g.appendChild(el("path",{d:"M "+(cx-9)+" "+cy+" L "+cx+" "+(cy-9)+" L "+(cx+9)+" "+cy+" L "+cx+" "+(cy+9)+" Z",
+        style:"fill:"+HEXES[k2]+";stroke:#fff;stroke-width:2.6"}));
+      svg.appendChild(g);
+    }
+  }
+  /* nhà cung cấp mới */
+  if(o.moi){
+    var mx=ax.px(o.moi.ng), my=ax.py(o.moi.xl);
+    if(tam){
+      var ck=cumCua(o.moi);
+      svg.appendChild(el("line",{x1:mx,y1:my,x2:ax.px(tam[ck.k][0]),y2:ax.py(tam[ck.k][1]),
+        style:"stroke:"+HEXES[ck.k]+";stroke-width:3;stroke-dasharray:7 5"}));
+    }
+    svg.appendChild(el("rect",{x:(mx-9).toFixed(1),y:(my-9).toFixed(1),width:18,height:18,
+      transform:"rotate(45 "+mx.toFixed(1)+" "+my.toFixed(1)+")",
+      style:"fill:#101418;stroke:#fff;stroke-width:2.6"}));
+    haloText(svg,mx,my-17,"Nhà cung cấp mới","#101418","middle",CHU.cot,800);
+  }
+}
+
+/* biểu đồ cột cho WSS theo K và Silhouette theo K */
+function veCot(id,o){
+  var svg=$(id); if(!svg) return;
+  clear(svg);
+  var W=520, H=300, ML=62, MR=18, MT=18, MB=46;
+  var hi=Math.max.apply(null,o.vals)*1.12;
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);
+  svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+  var yt=[], i, b=hi/4;
+  for(i=0;i<=4;i++) yt.push(Math.round(i*b*100)/100);
+  var ax=axes(svg,{W:W,H:H,ML:ML,MR:MR,MT:MT,MB:MB,xlo:0,xhi:o.vals.length,ylo:0,yhi:hi,
+    xticks:[],yticks:yt,xlab:o.xlab,ylab:o.ylab});
+  var bw=(W-ML-MR)/o.vals.length;
+  for(i=0;i<o.vals.length;i++){
+    var x0=ML+i*bw+bw*0.18, wd=bw*0.64;
+    var chon = o.ks[i]===o.chon;
+    svg.appendChild(el("rect",{x:x0.toFixed(1), y:ax.py(o.vals[i]).toFixed(1),
+      width:wd.toFixed(1), height:(ax.py(0)-ax.py(o.vals[i])).toFixed(1),
+      rx:4, style:"fill:"+(chon?HEXES[4]:"#C3CBD2")}));
+    haloText(svg,x0+wd/2,ax.py(o.vals[i])-8,fmt(o.vals[i],o.dec),chon?HEXES[4]:"#39424B","middle",CHU.cot,700);
+    svg.appendChild(el("text",{x:(x0+wd/2).toFixed(1),y:H-MB+18,"class":"tick","text-anchor":"middle"},"K = "+o.ks[i]));
+  }
+  /* đường gấp khúc nối đỉnh các cột, để thấy chỗ gãy khuỷu */
+  if(o.noi){
+    var pts=[];
+    for(i=0;i<o.vals.length;i++) pts.push((ML+i*bw+bw/2).toFixed(1)+","+ax.py(o.vals[i]).toFixed(1));
+    svg.appendChild(el("polyline",{points:pts.join(" "),
+      style:"fill:none;stroke:#101418;stroke-width:2.2;stroke-opacity:.55"}));
+  }
+}
+
+/* ================= TRẠNG THÁI ================= */
+var STEP=0, VONG=0, KCHON=3, CAPA=0, CAPB=4, CH="thap", BATNGOAI=false;
+var MOI={ng:7, xl:3};
+
+/* kết quả theo từng K, tính sẵn để đổi K không phải chạy lại */
+var KQK={};
+(function theoKDay(){
+  for(var K=2;K<=5;K++){
+    var r=kmeansTot(X12,K,23+K);
+    var thu=[]; for(var k=0;k<K;k++) thu.push({k:k,c:r.tam[k]});
+    thu.sort(function(a,b){ return (a.c[1]-b.c[1]) || (a.c[0]-b.c[0]); });
+    var map={}; thu.forEach(function(z,i){ map[z.k]=i; });
+    KQK[K]={lab:r.lab.map(function(k){return map[k];}), tam:thu.map(function(z){return z.c;}),
+            wss:r.wss, sil:mean(silhouette(X12,r.lab,K))};
+  }
+})();
+
+/* nhóm theo nhãn, trả về mảng các mảng dòng */
+function nhomTheo(lab,n){
+  var g=[]; for(var k=0;k<n;k++) g.push([]);
+  for(var i=0;i<DU.length;i++) g[lab[i]].push(DU[i]);
+  return g;
+}
+function tenNhom(g){ return g.map(function(d){ return d.ten; }).join(", "); }
+
+/* ---------- thêm điểm ngoại lai ---------- */
+var NG_KQ=(function(){
+  var Xn=X12.concat([[NGOAI.ng,NGOAI.xl]]);
+  return kmeansTot(Xn,3,41);
+})();
+
+/* ================= CÁC BƯỚC =================
+   Bốn bước đầu cho thấy phân cụm làm được gì.
+   Bốn bước sau mở ra xem máy làm thế nào.
+   ============================================= */
+var VSTEP=[
+
+{ label:"Dữ liệu thô",
+  html:function(){
+    return '<div class="two">'+bangKhung("slot","12 nhà cung cấp của phòng mua hàng")+'<div class="col">'+
+      '<div class="say"><h3>Bảng chỉ có hai cột số</h3>'+
+      '<p>Mỗi dòng là một nhà cung cấp, ghi <strong>số ngày giao trung bình</strong> và <strong>số ngày xử lý một khiếu nại</strong>.</p>'+
+      '<p>Hai cột đều tính bằng ngày nên so sánh trực tiếp được. Không cột nào nói nhà cung cấp này thuộc nhóm nào.</p></div>'+
+      '<div class="kpis three">'+kpiBox("Số dòng","12","nhà cung cấp")+kpiBox("Đặc trưng","2","đều tính bằng ngày")+
+      kpiBox("Nhãn cụm","0","chưa có")+'</div>'+
+      '<div class="note"><strong>Việc cần làm.</strong> Phòng mua hàng muốn chia 12 nhà cung cấp thành các nhóm để áp chính sách mua khác nhau. Chưa có nhãn nhóm nào nên không thể học từ quá khứ như phân lớp.</div>'+
+      '</div></div>'+
+      lesson('Phân cụm bắt đầu từ <strong>dữ liệu chưa có nhãn</strong>. Khác phân lớp ở chỗ không có cột đáp án để học và cũng không có đáp án để chấm điểm.');
+  },
+  draw:function(){ gan("slot"); sauKhung(function(){ xepBang(null,true); }); },
+  update:function(){} },
+
+{ label:"Đưa lên mặt phẳng",
+  html:function(){
+    return '<div class="two">'+
+      '<div class="box"><div class="box-h"><h3>Mỗi nhà cung cấp là một điểm</h3>'+
+      '<span class="meta">12 điểm, chưa chia nhóm</span></div>'+
+      '<svg class="chart" id="chTho"></svg></div>'+
+      '<div class="col">'+
+      '<div class="say"><h3>Hai cột số thành hai trục</h3>'+
+      '<p>Trục ngang là số ngày giao, trục dọc là số ngày xử lý khiếu nại. Mỗi nhà cung cấp thành <strong>một điểm</strong>.</p>'+
+      '<p>Mọi điểm cùng một màu xám vì chưa có nhãn cụm. Nhìn vào hình, mắt người đã thấy các điểm <strong>dồn về ba chỗ</strong>, nhưng máy thì chưa biết gì.</p></div>'+
+      '<div class="note"><strong>Hai trục cùng một đơn vị.</strong> Cả hai cột đều tính bằng ngày nên cộng bình phương của chúng có nghĩa, và khoảng cách giữa hai điểm cũng ra đơn vị ngày.</div>'+
+      '</div></div>'+
+      lesson('Đưa dữ liệu lên mặt phẳng là cách nhìn thấy cấu trúc. Nhưng chỉ nhìn được khi có <strong>hai cột và ít dòng</strong>; với 1200 nhà cung cấp và mười cột thì mắt không làm nổi việc này.');
+  },
+  draw:function(){ veDiem("chTho",{}); },
+  update:function(){} },
+
+{ label:"Khoanh vùng ba cụm",
+  html:function(){
+    return '<div class="two">'+
+      '<div class="box"><div class="box-h"><h3>Ba vùng đã khoanh</h3>'+
+      '<span class="meta">K = 3, hình thoi là tâm cụm</span></div>'+
+      '<svg class="chart" id="chCum"></svg>'+chuThich(TEN.map(function(t,i){ return {ten:t.ten, mau:HEXES[i]}; }))+'</div>'+
+      '<div class="col">'+
+      '<div class="say"><h3>Kết quả phân cụm</h3>'+
+      '<p>Mỗi vòng nét đứt là <strong>một cụm</strong>. Đó là toàn bộ thứ phân cụm trả lại: mỗi nhà cung cấp thuộc về đúng một cụm.</p>'+
+      '<p>Hình thoi ở giữa mỗi vòng là <strong>tâm cụm</strong>, điểm đại diện cho cả cụm.</p></div>'+
+      '<div class="box"><div class="box-h"><h3>Bảng đã mọc thêm cột Cụm</h3></div>'+
+      '<div class="dhead" style="padding:10px 20px 7px"><span>Mã</span><span>Số ngày giao</span>'+
+      '<span>Ngày xử lý khiếu nại</span><span>Cụm</span></div>'+
+      '<div id="slot" style="padding:0 10px 12px"></div></div>'+
+      '</div></div>'+
+      lesson('Phân cụm chia dữ liệu thành <strong>các cụm chưa biết trước</strong>. Tên cụm do người đặt, máy chỉ trả về số thứ tự cụm.');
+  },
+  draw:function(){
+    veDiem("chCum",{lab:KQ.lab, tam:KQ.tam, rings:true});
+    gan("slot"); sauKhung(function(){ xepBang(nhomTheo(KQ.lab,3),true); });
+  },
+  update:function(){} },
+
+{ label:"Đặt tên và thử điểm mới",
+  html:function(){
+    var g=nhomTheo(KQ.lab,3);
+    return '<div class="two">'+
+      '<div class="box"><div class="box-h"><h3>Ba cụm và nhà cung cấp mới</h3>'+
+      '<span class="meta">hình thoi đen là nhà cung cấp mới</span></div>'+
+      '<svg class="chart" id="chMoi"></svg></div>'+
+      '<div class="col">'+
+      '<div class="box"><div class="box-h"><h3>Thử một nhà cung cấp mới</h3></div><div class="box-b">'+
+      '<div style="display:grid;gap:16px">'+
+      '<div class="sl"><div class="slh"><span>Số ngày giao trung bình</span><b id="vNg"></b></div>'+
+      '<input type="range" id="slNg" min="1" max="14" step="1" value="'+MOI.ng+'"></div>'+
+      '<div class="sl"><div class="slh"><span>Số ngày xử lý khiếu nại</span><b id="vTl"></b></div>'+
+      '<input type="range" id="slTl" min="1" max="14" step="1" value="'+MOI.xl+'"></div></div>'+
+      '<div id="ketLuan" style="margin-top:16px"></div></div></div>'+
+      '<div class="cards" style="grid-template-columns:minmax(0,1fr)">'+
+      g.map(function(z,i){
+        return '<div class="card" style="border-color:'+HEXES[i]+'">'+
+          '<h3><span class="sw" style="background:'+HEXES[i]+'"></span>'+TEN[i].ten+'</h3>'+
+          '<p>'+tenNhom(z)+'. Tâm cụm ('+fmt(KQ.tam[i][0],2)+' ngày; '+fmt(KQ.tam[i][1],2)+'%).</p>'+
+          '<p class="act">'+TEN[i].viec+'</p></div>'; }).join("")+
+      '</div></div></div>'+
+      lesson('Kết quả phân cụm chỉ dùng được sau khi <strong>diễn giải theo bối cảnh</strong>. Ba con số tâm cụm thành ba chính sách mua hàng khác nhau.');
+  },
+  draw:function(){
+    veNutMoi();
+    capNhatMoi();
+  },
+  update:function(){ capNhatMoi(); } },
+
+{ label:"Khoảng cách Euclid",
+  html:function(){
+    return '<div class="two">'+
+      '<div class="box"><div class="box-h"><h3>Khoảng cách giữa hai nhà cung cấp</h3>'+
+      '<span class="meta">chọn hai mã bên phải</span></div>'+
+      '<svg class="chart" id="chKC"></svg></div>'+
+      '<div class="col">'+
+      '<div class="say"><h3>Giống nhau đo bằng khoảng cách</h3>'+
+      '<p>Máy không nhìn hình. Để nói hai nhà cung cấp giống nhau hay khác nhau, nó tính <strong>khoảng cách</strong> giữa hai điểm.</p>'+
+      '<div class="ct"><p class="nhan">Khoảng cách Euclid trong mặt phẳng</p>'+
+      '<div class="ft"><i>d</i>(<i>A</i>,&thinsp;<i>B</i>)&nbsp;=&nbsp;&radic;<span class="rad">(<i>x</i><sub>A</sub>&thinsp;&minus;&thinsp;<i>x</i><sub>B</sub>)<sup>2</sup>&nbsp;+&nbsp;(<i>y</i><sub>A</sub>&thinsp;&minus;&thinsp;<i>y</i><sub>B</sub>)<sup>2</sup></span></div>'+
+      '<p class="rap" id="rapKC"></p></div>'+
+      '<p>Càng gần nhau thì càng giống nhau. Toàn bộ K-means chỉ dựa vào con số này.</p></div>'+
+      '<div class="box"><div class="box-h"><h3>Chọn hai nhà cung cấp</h3></div><div class="box-b">'+
+      '<div style="display:grid;gap:14px">'+
+      '<div class="sl"><div class="slh"><span>Điểm A</span></div><div class="seg" id="sgA"></div></div>'+
+      '<div class="sl"><div class="slh"><span>Điểm B</span></div><div class="seg" id="sgB"></div></div></div>'+
+      '<div id="kcBox" style="margin-top:14px"></div></div></div>'+
+      '</div></div>'+
+      lesson('Khoảng cách là <strong>thước đo giống nhau</strong> của phân cụm. Hai cạnh góc vuông là hiệu của từng cột, cạnh huyền là khoảng cách.');
+  },
+  draw:function(){ veSegCap(); capNhatKC(); },
+  update:function(){ capNhatKC(); } },
+
+{ label:"Vòng lặp K-means",
+  html:function(){
+    return '<div class="two">'+
+      '<div class="box"><div class="box-h"><h3>Tâm cụm di chuyển qua từng vòng</h3>'+
+      '<span class="meta" id="vgMeta"></span></div>'+
+      '<svg class="chart" id="chVong"></svg></div>'+
+      '<div class="col">'+
+      '<div class="loopbar"><span class="num" id="vgSo"></span>'+
+      '<span class="bar"><i id="vgBar" style="width:0%"></i></span>'+
+      '<button class="btn" id="bVong" type="button">Chạy một vòng</button>'+
+      '<button class="btn ghost" id="bLai" type="button">Chạy lại</button></div>'+
+      '<div class="say" id="vgSay"></div>'+
+      '<div class="box"><div class="box-h"><h3>Khoảng cách tới ba tâm</h3>'+
+      '<span class="meta">in đậm là tâm gần nhất</span></div>'+
+      '<div class="tw" id="vgBang"></div></div>'+
+      '</div></div>'+
+      lesson('K-means lặp đúng hai việc: <strong>gán mỗi điểm vào tâm gần nhất</strong>, rồi <strong>đặt lại tâm bằng trung bình các điểm trong cụm</strong>. Khi không điểm nào đổi cụm nữa thì dừng.');
+  },
+  draw:function(){ capNhatVong(); },
+  update:function(){ capNhatVong(); } },
+
+{ label:"Chọn số cụm K",
+  html:function(){
+    return '<div class="two even">'+
+      '<div class="col">'+
+      '<div class="box"><div class="box-h"><h3>Kết quả với K đang chọn</h3>'+
+      '<span class="meta" id="kMeta"></span></div>'+
+      '<svg class="chart" id="chK"></svg></div>'+
+      '<div class="box"><div class="box-h"><h3>Chọn K</h3></div><div class="box-b">'+
+      '<div class="seg" id="sgK"></div><div id="kSay" style="margin-top:14px"></div></div></div>'+
+      '</div>'+
+      '<div class="col">'+
+      '<div class="box"><div class="box-h"><h3>WSS theo K</h3><span class="meta">càng nhỏ càng chặt</span></div>'+
+      '<svg class="chart" id="chWSS" style="max-height:34vh"></svg>'+
+      '<p class="pf" style="padding:0 16px 14px;margin:0;font-size:15.5px;color:var(--ink-2)">WSS giảm mạnh tới K = 3 rồi giảm chậm lại. Chỗ gãy khuỷu đó là K nên chọn.</p></div>'+
+      '<div class="box"><div class="box-h"><h3>Silhouette trung bình theo K</h3><span class="meta">càng gần 1 càng tốt</span></div>'+
+      '<svg class="chart" id="chSIL" style="max-height:34vh"></svg>'+
+      '<p class="pf" style="padding:0 16px 14px;margin:0;font-size:15.5px;color:var(--ink-2)">Cao nhất tại K = 3, khớp với chỗ gãy khuỷu của WSS.</p></div>'+
+      '</div></div>'+
+      lesson('K phải <strong>chọn trước</strong>, thuật toán không tự quyết định. WSS và Silhouette là hai gợi ý, quyết định cuối cùng là cụm có <strong>diễn giải được</strong> hay không.');
+  },
+  draw:function(){ veSegK(); capNhatK(); },
+  update:function(){ capNhatK(); } },
+
+{ label:"Điểm ngoại lai",
+  html:function(){
+    return '<div class="two">'+
+      '<div class="box"><div class="box-h"><h3>Thêm một nhà cung cấp rất xa</h3>'+
+      '<span class="meta" id="ngMeta"></span></div>'+
+      '<svg class="chart" id="chNgoai"></svg></div>'+
+      '<div class="col">'+
+      '<div class="box"><div class="box-h"><h3>Bật tắt NCC13</h3></div><div class="box-b">'+
+      '<div class="seg" id="sgNg"></div>'+
+      '<p style="margin:14px 0 0;font-size:16px;color:var(--ink-2)">NCC13 giao hàng mất <strong>30 ngày</strong>, xử lý khiếu nại 3 ngày. Một nhà cung cấp như vậy có thật, nhưng nằm rất xa 12 nhà còn lại.</p></div></div>'+
+      '<div class="say" id="ngSay"></div>'+
+      '</div></div>'+
+      lesson('Một điểm ở quá xa <strong>kéo lệch tâm cụm</strong> và chiếm hẳn một cụm cho riêng nó. Cách xử lý: dùng K-Medians với tâm là trung vị, hoặc DBSCAN để coi điểm đó là nhiễu.');
+  },
+  draw:function(){ veSegNg(); capNhatNgoai(); },
+  update:function(){ capNhatNgoai(); } }];
+
+/* ===================================================================
+   Đánh số cụm của vòng lặp theo đúng ba cụm ở phần dẫn nhập, để màu
+   không nhảy giữa các bước. Số thứ tự cụm do thuật toán trả về là tùy
+   tâm khởi tạo, nên phải ánh xạ lại mới so sánh được bằng mắt.
+   =================================================================== */
+(function doiSoCum(){
+  var cuoi=LS[LS.length-1], map={}, k, i;
+  for(k=0;k<cuoi.tam.length;k++){
+    var bk=0, bd=kc(cuoi.tam[k],KQ.tam[0]);
+    for(i=1;i<3;i++){ var dd=kc(cuoi.tam[k],KQ.tam[i]); if(dd<bd){ bd=dd; bk=i; } }
+    map[k]=bk;
+  }
+  var t0=[]; for(k=0;k<TAM0.length;k++) t0[map[k]]=TAM0[k];
+  TAM0=t0;
+  LS=LS.map(function(r){
+    var tm=[]; for(k=0;k<r.tam.length;k++) tm[map[k]]=r.tam[k];
+    return {vong:r.vong, wss:r.wss, yen:r.yen, tam:tm,
+            lab:r.lab.map(function(z){ return map[z]; })};
+  });
+})();
+function tamDung(v){ return v<=1 ? TAM0 : LS[v-2].tam; }
+
+/* ================= BƯỚC: THỬ MỘT NHÀ CUNG CẤP MỚI ================= */
+function veNutMoi(){
+  var a=$("slNg"), b=$("slTl");
+  if(a) a.addEventListener("input",function(){ MOI.ng=Number(a.value); capNhatMoi(); });
+  if(b) b.addEventListener("input",function(){ MOI.xl=Number(b.value); capNhatMoi(); });
+}
+function capNhatMoi(){
+  var n=$("vNg"), t=$("vTl");
+  if(n) n.textContent=fmt(MOI.ng)+" ngày";
+  if(t) t.textContent=fmt(MOI.xl)+" ngày";
+  veDiem("chMoi",{lab:KQ.lab, tam:KQ.tam, rings:true, moi:MOI});
+  var c=cumCua(MOI), box=$("ketLuan");
+  if(!box) return;
+  var ds=[0,1,2].map(function(k){ return kc([MOI.ng,MOI.xl],KQ.tam[k]); });
+  box.innerHTML='<table class="t compact"><thead><tr><th class="l">Tâm cụm</th><th>Khoảng cách</th></tr></thead><tbody>'+
+    [0,1,2].map(function(k){
+      return '<tr'+(k===c.k?' style="background:'+SOFTS[k]+'"':'')+'><td class="l"><span class="sw" style="background:'+HEXES[k]+'"></span>'+
+        TEN[k].ten+'</td><td class="n'+(k===c.k?' win':'')+'">'+fmt(ds[k],2)+'</td></tr>'; }).join("")+
+    '</tbody></table>'+
+    '<div class="note ok" style="margin-top:12px"><strong>Xếp vào '+TEN[c.k].ten+'.</strong> Gần tâm cụm đó nhất, khoảng cách '+fmt(c.d,2)+'. '+TEN[c.k].viec+'.</div>';
+}
+
+/* ================= BƯỚC: KHOẢNG CÁCH ================= */
+function veSegCap(){
+  var items=DU.map(function(d,i){ return {label:d.ten.replace("NCC",""), value:i}; });
+  seg("sgA", items, CAPA, function(v){ CAPA=v; veSegCap(); capNhatKC(); });
+  seg("sgB", items, CAPB, function(v){ CAPB=v; veSegCap(); capNhatKC(); });
+}
+function capNhatKC(){
+  if(CAPA===CAPB) CAPB=(CAPA+1)%DU.length;
+  var A=DU[CAPA], B=DU[CAPB], dn=A.ng-B.ng, dt=A.xl-B.xl, d=kc([A.ng,A.xl],[B.ng,B.xl]);
+  veDiem("chKC",{capA:CAPA, capB:CAPB});
+  var r=$("rapKC");
+  if(r) r.innerHTML='d('+A.ten+', '+B.ten+') = √( ('+fmt(A.ng)+' − '+fmt(B.ng)+')² + ('+
+    fmt(A.xl)+' − '+fmt(B.xl)+')² ) = √( '+fmt(dn*dn)+' + '+fmt(dt*dt)+' ) = <span class="kq">'+fmt(d,2)+'</span>';
+  var box=$("kcBox");
+  if(box) box.innerHTML='<table class="t compact"><thead><tr><th class="l">Nhà cung cấp</th><th>Ngày giao</th><th>Ngày xử lý</th></tr></thead><tbody>'+
+    '<tr><td class="l">'+A.ten+'</td><td class="n">'+fmt(A.ng)+'</td><td class="n">'+fmt(A.xl)+'</td></tr>'+
+    '<tr><td class="l">'+B.ten+'</td><td class="n">'+fmt(B.ng)+'</td><td class="n">'+fmt(B.xl)+'</td></tr>'+
+    '<tr><td class="l">Hiệu</td><td class="n">'+fmt(Math.abs(dn))+'</td><td class="n">'+fmt(Math.abs(dt))+'</td></tr>'+
+    '</tbody></table>'+
+    '<div class="note" style="margin-top:12px">Hai nhà cung cấp này cách nhau <strong>'+fmt(d,2)+'</strong>. '+
+    (d<3?'Khoảng cách nhỏ nên hai nhà cung cấp giống nhau, rất có thể cùng một cụm.'
+        :'Khoảng cách lớn nên hai nhà cung cấp khác nhau, khó cùng một cụm.')+'</div>';
+}
+
+/* ================= BƯỚC: VÒNG LẶP ================= */
+function capNhatVong(){
+  var bv=$("bVong"), bl=$("bLai");
+  if(bv && !bv._wired){ bv._wired=1; bv.addEventListener("click",function(){ VONG=Math.min(VONG+1,LS.length); capNhatVong(); }); }
+  if(bl && !bl._wired){ bl._wired=1; bl.addEventListener("click",function(){ VONG=0; capNhatVong(); }); }
+
+  var r = VONG>=1 ? LS[VONG-1] : null;
+  var doi = VONG===2 ? [7] : [];
+  /* từ vòng 1 trở đi vẽ cả vòng bao cụm. Vòng 1 nó phình rộng vì ôm cả NCC8,
+     vòng 2 co lại, đó là thứ cho thấy vòng lặp vừa làm gì. */
+  veDiem("chVong",{lab:r?r.lab:null, tam:VONG===0?TAM0:r.tam, doi:doi,
+                   noiTam:!!r, rings:!!r});
+
+  var so=$("vgSo"); if(so) so.textContent = VONG===0 ? "Tâm khởi tạo" : "Vòng "+VONG+" / "+LS.length;
+  var bar=$("vgBar"); if(bar) bar.style.width = Math.round(VONG/LS.length*100)+"%";
+  var mt=$("vgMeta");
+  if(mt) mt.textContent = VONG===0 ? "chưa gán điểm nào" : "WSS = "+fmt(r.wss,2)+(r.yen?", tâm đã ổn định":"");
+  if(bv) bv.disabled = VONG>=LS.length;
+
+  var s=$("vgSay");
+  if(s){
+    if(VONG===0){
+      s.innerHTML='<h3>Ba tâm khởi tạo</h3>'+
+        '<p>Thuật toán chọn ngẫu nhiên ba điểm dữ liệu làm tâm: <strong>NCC8 (9; 3)</strong>, <strong>NCC5 (10; 2)</strong> và <strong>NCC9 (3; 11)</strong>.</p>'+
+        '<p>Đây là một bộ tâm <strong>khởi tạo xấu</strong>: hai tâm đầu nằm sát nhau trong cùng một nhóm thật. Bấm Chạy một vòng để xem thuật toán tự sửa.</p>';
+    } else if(VONG===1){
+      s.innerHTML='<h3>Vòng 1: gán điểm rồi dời tâm</h3>'+
+        '<p>Mỗi điểm về tâm gần nó nhất. Vì hai tâm đầu nằm sát nhau, <strong>NCC8 bị gán chung với bốn nhà giao nhanh</strong>, dù nó mất 9 ngày mới giao xong.</p>'+
+        '<p>Vòng nét đứt bao cụm <strong>phình rộng sang tận bên phải</strong> vì phải ôm cả NCC8.</p>'+
+        '<p>Tâm mới là trung bình các điểm trong cụm. WSS = <strong>'+fmt(LS[0].wss,2)+'</strong>.</p>';
+    } else if(VONG===2){
+      s.innerHTML='<h3>Vòng 2: NCC8 đổi cụm</h3>'+
+        '<p>Tâm đã dời nên khoảng cách đổi theo. Lần này <strong>NCC8 về đúng nhóm giao chậm</strong>, là điểm duy nhất đổi cụm ở vòng này.</p>'+
+        '<p>WSS tụt từ '+fmt(LS[0].wss,2)+' xuống <strong>'+fmt(LS[1].wss,2)+'</strong>. Ba tâm thành ('+
+        fmt(LS[1].tam[0][0],2)+'; '+fmt(LS[1].tam[0][1],2)+'), ('+fmt(LS[1].tam[1][0],2)+'; '+fmt(LS[1].tam[1][1],2)+') và ('+
+        fmt(LS[1].tam[2][0],2)+'; '+fmt(LS[1].tam[2][1],2)+').</p>';
+    } else {
+      s.innerHTML='<h3>Vòng 3: không điểm nào đổi cụm</h3>'+
+        '<p>Gán lại cho ra <strong>đúng cách chia của vòng 2</strong>, nên tâm không dịch nữa. Thuật toán <strong>hội tụ và dừng</strong>, WSS giữ ở '+fmt(LS[2].wss,2)+'.</p>'+
+        '<p>Ba tâm này trùng đúng ba vùng đã khoanh ở phần dẫn nhập. Máy đi tới cùng kết quả mà mắt người nhìn ra, nhưng bằng phép tính nên làm được với bảng rất lớn.</p>';
+    }
+  }
+  var bg=$("vgBang");
+  if(bg){
+    if(VONG===0){ bg.innerHTML='<p style="padding:14px 16px;margin:0;color:var(--ink-3);font-size:16px">Chưa chạy vòng nào. Bảng khoảng cách hiện ra sau khi bấm Chạy một vòng.</p>'; }
+    else {
+      var T=tamDung(VONG);
+      bg.innerHTML='<table class="t compact"><thead><tr><th class="l">Mã</th>'+
+        [0,1,2].map(function(k){ return '<th>tâm '+fmt(T[k][0],2)+'; '+fmt(T[k][1],2)+'</th>'; }).join("")+
+        '<th>Cụm</th></tr></thead><tbody>'+
+        DU.map(function(d,i){
+          var ds=[0,1,2].map(function(k){ return kc([d.ng,d.xl],T[k]); });
+          var mk=ds.indexOf(Math.min.apply(null,ds));
+          var noi = VONG===2 && d.id===7;
+          return '<tr'+(noi?' style="background:'+SOFTS[LS[1].lab[i]]+'"':'')+'><td class="l">'+d.ten+(noi?' đổi cụm':'')+'</td>'+
+            ds.map(function(v,k){ return '<td class="n'+(k===mk?' win':'')+'">'+fmt(v,2)+'</td>'; }).join("")+
+            '<td class="n" style="color:'+HEXES[r.lab[i]]+';font-weight:800">'+(r.lab[i]+1)+'</td></tr>'; }).join("")+
+        '</tbody></table>';
+    }
+  }
+}
+
+/* ================= BƯỚC: CHỌN K ================= */
+function veSegK(){
+  seg("sgK",[2,3,4,5].map(function(k){ return {label:"K = "+k, value:k}; }), KCHON,
+    function(v){ KCHON=v; veSegK(); capNhatK(); });
+}
+function capNhatK(){
+  var r=KQK[KCHON];
+  veDiem("chK",{lab:r.lab, tam:r.tam, rings:true, ten:false, H:420});
+  var mt=$("kMeta");
+  if(mt) mt.textContent="K = "+KCHON+", WSS = "+fmt(r.wss,2)+", Silhouette = "+fmt(r.sil,3);
+  veCot("chWSS",{ks:[1,2,3,4,5], vals:WSSK, chon:KCHON, dec:1, noi:true, xlab:"Số cụm K", ylab:"WSS"});
+  veCot("chSIL",{ks:[2,3,4,5], vals:SILK.slice(1), chon:KCHON, dec:3, xlab:"Số cụm K", ylab:"Silhouette"});
+  var s=$("kSay");
+  if(!s) return;
+  var g=nhomTheo(r.lab,KCHON);
+  var noidung;
+  if(KCHON===2) noidung='Hai cụm gộp nhóm giao nhanh và nhóm giao chậm làm một. WSS còn rất lớn, '+fmt(WSSK[1],1)+', vì cụm đó kéo dài suốt trục ngang.';
+  else if(KCHON===3) noidung='Ba cụm khớp đúng ba nhóm nhìn thấy trên hình. WSS '+fmt(WSSK[2],1)+' và Silhouette '+fmt(SILK[2],3)+' đều tốt nhất, và mỗi cụm đặt được một tên nghiệp vụ.';
+  else if(KCHON===4) noidung='Nhóm chậm xử lý bị cắt làm hai nửa. WSS chỉ giảm thêm '+fmt(WSSK[2]-WSSK[3],1)+', đổi lại Silhouette tụt xuống '+fmt(SILK[3],3)+'. Cắt thêm mà không nói được hai nửa khác nhau ở đâu.';
+  else noidung='Năm cụm thì nhóm giao chậm cũng bị cắt. Silhouette còn '+fmt(SILK[4],3)+', thấp nhất trong bốn giá trị K đã thử.';
+  s.innerHTML='<p style="margin:0 0 10px;font-size:16px;color:var(--ink-2)">'+noidung+'</p>'+
+    '<table class="t compact"><thead><tr><th class="l">Cụm</th><th class="l">Thành viên</th></tr></thead><tbody>'+
+    g.map(function(z,i){ return '<tr><td class="l"><span class="sw" style="background:'+HEXES[i]+'"></span>'+(i+1)+
+      '</td><td class="l">'+tenNhom(z)+'</td></tr>'; }).join("")+'</tbody></table>';
+}
+
+/* ================= BƯỚC: NGOẠI LAI ================= */
+function veSegNg(){
+  seg("sgNg",[{label:"12 nhà cung cấp",value:false},{label:"Thêm NCC13",value:true}], BATNGOAI,
+    function(v){ BATNGOAI=v; veSegNg(); capNhatNgoai(); });
+}
+function capNhatNgoai(){
+  if(BATNGOAI) veDiem("chNgoai",{lab:NG_KQ.lab, tam:NG_KQ.tam, rings:true, ngoai:true, xhi:32});
+  else veDiem("chNgoai",{lab:KQ.lab, tam:KQ.tam, rings:true});
+  var mt=$("ngMeta");
+  if(mt) mt.textContent = BATNGOAI ? "13 điểm, K = 3" : "12 điểm, K = 3";
+  var s=$("ngSay");
+  if(!s) return;
+  if(!BATNGOAI){
+    s.innerHTML='<h3>Ba cụm khi chưa có NCC13</h3>'+
+      '<p>Ba cụm cân nhau, mỗi cụm bốn nhà cung cấp. WSS = <strong>'+fmt(KQ.wss,2)+'</strong>.</p>'+
+      '<p>Bấm Thêm NCC13 để xem một điểm ở xa làm gì với kết quả này.</p>';
+  } else {
+    var g=[[],[],[]], ten=["NCC1","NCC2","NCC3","NCC4","NCC5","NCC6","NCC7","NCC8","NCC9","NCC10","NCC11","NCC12","NCC13"];
+    NG_KQ.lab.forEach(function(k,i){ g[k].push(ten[i]); });
+    g.sort(function(a,b){ return b.length-a.length; });
+    s.innerHTML='<h3>Ba cụm khi có NCC13</h3>'+
+      '<p>Vẫn K = 3, nhưng cách chia đổi hẳn:</p><ul>'+
+      g.map(function(z){ return '<li>'+z.length+' nhà cung cấp: '+z.join(", ")+'</li>'; }).join("")+'</ul>'+
+      '<p><strong>NCC13 chiếm trọn một cụm cho riêng nó.</strong> Nhóm tin cậy và nhóm giao chậm bị gộp làm một, nên phòng mua hàng mất đúng phần thông tin cần dùng. WSS vọt lên '+fmt(NG_KQ.wss,2)+'.</p>';
+  }
+}
+
+/* ================= ĐIỀU KHIỂN ================= */
+function renderProg(){
+  var ol=$("prog"); ol.innerHTML="";
+  VSTEP.forEach(function(s,i){
+    var li=document.createElement("li");
+    li.className = i===STEP ? "cur" : (i<STEP ? "done" : "");
+    var b=document.createElement("button"); b.type="button";
+    b.innerHTML='<span class="sn">'+(i<4 ? "Dẫn nhập "+(i+1) : "Kỹ thuật "+(i-3))+'</span>'+
+                '<span class="st">'+s.label+'</span>';
+    b.addEventListener("click",function(){ goStep(i); });
+    li.appendChild(b); ol.appendChild(li);
+  });
+}
+function showStep(){
+  renderProg();
+  $("stage").innerHTML = VSTEP[STEP].html();
+  VSTEP[STEP].draw();
+  $("bPrev").disabled = STEP===0;
+  $("bNext").disabled = STEP===VSTEP.length-1;
+  $("bNext").textContent = STEP===VSTEP.length-1 ? "Đã xong" : "Bước tiếp ▶";
+  $("runHint").textContent = STEP===0 ? "Bốn bước đầu cho thấy phân cụm làm được gì. Bốn bước sau mở ra xem máy làm thế nào." : "";
+}
+function goStep(s){ STEP=clamp(s,0,VSTEP.length-1); showStep(); }
+$("bPrev").addEventListener("click",function(){ goStep(STEP-1); });
+$("bNext").addEventListener("click",function(){ goStep(STEP+1); });
+dungHang();
+showStep();
+
+})();
+</script>
+</body>
+</html>
